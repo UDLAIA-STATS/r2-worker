@@ -14,10 +14,9 @@ export default {
         return new Response("Method not allowed", { status: 405 });
       }
 
-      const formData = await request.formData();
-      const fileName = formData.get("name");
-
-      if (!fileName || typeof fileName !== "string") {
+      const { filename } = await request.json();
+      
+      if (!filename || typeof filename !== "string") {
         return new Response("Missing video name", { status: 400 });
       }
 
@@ -25,7 +24,7 @@ export default {
       const accountId = env.R2_ACCOUNT_ID;
 
       // Tomamos extensión y nombre real sin quemar nada
-      const originalName = fileName;
+      const originalName = filename;
       const key = `${crypto.randomUUID()}-${originalName}`;
 
       const client = new AwsClient({
