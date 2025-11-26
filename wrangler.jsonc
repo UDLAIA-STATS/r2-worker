@@ -29,18 +29,7 @@
 			"preview_bucket_name": "videos-preview",
 			"remote": true
 		}
-	],
-	"vars": {
-		"R2_ACCESS_TOKEN": "", 
-		"R2_ACCESS_KEY_ID": "",
-		"R2_SECRET_ACCESS_KEY": "", 
-		"S3_CLIENT_ACCOUNT_ENDPOINT": "", 
-		"R2_ACCOUNT_ID": "",
-		"R2_BUCKET": "",
-		"R2_AUTH_SECRET": "", 
-		"CATALOG_URI": "",
-		"WAREHOUSE": ""
-	}
+	]
 
 	/**
 	 * Smart Placement

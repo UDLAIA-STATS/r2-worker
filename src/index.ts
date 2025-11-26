@@ -1,70 +1,71 @@
 import { AwsClient } from 'aws4fetch';
 
 export interface Env {
-	R2_ACCESS_TOKEN: string;
-	R2_ACCESS_KEY_ID: string;
-	R2_SECRET_ACCESS_KEY: string;
-	S3_CLIENT_ACCOUNT_ENDPOINT: string;
-	R2_ACCOUNT_ID: string;
-	R2_BUCKET: string;
-	R2_AUTH_SECRET: string;
-	CATALOG_URI: string;
-	WAREHOUSE: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_ACCOUNT_ID: string;
+  R2_BUCKET: string;
 }
 
 export default {
-	async fetch(request, env, ctx) {
-		try {
-			if (request.method !== 'POST') {
-				return new Response('Method not allowed', { status: 405 });
-			}
+  async fetch(request, env) {
+    try {
+      if (request.method !== "POST") {
+        return new Response("Method not allowed", { status: 405 });
+      }
 
-			const formData = await request.formData();
-			const file = formData.get('video');
+      const formData = await request.formData();
+      const fileName = formData.get("name");
 
-			if (!file) {
-				return new Response('Missing video file', { status: 400 });
-			}
+      if (!fileName || typeof fileName !== "string") {
+        return new Response("Missing video name", { status: 400 });
+      }
 
-			const bucketName = env.R2_BUCKET;
-			const accountId = env.R2_ACCOUNT_ID;
-			const accessKeyId = env.R2_ACCESS_KEY_ID;
-			const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
+      const bucket = env.R2_BUCKET;
+      const accountId = env.R2_ACCOUNT_ID;
 
-			const key = `videos/${crypto.randomUUID()}-${file.name}`;
+      // Tomamos extensión y nombre real sin quemar nada
+      const originalName = fileName;
+      const key = `${crypto.randomUUID()}-${originalName}`;
 
-			const client = new AwsClient({
-				accessKeyId,
-				secretAccessKey,
-			});
+      const client = new AwsClient({
+        accessKeyId: env.R2_ACCESS_KEY_ID,
+        secretAccessKey: env.R2_SECRET_ACCESS_KEY
+      });
 
-			let putUrl = new URL(`https://${bucketName}.${accountId}.r2.cloudflarestorage.com`);
+      // === Firmamos URL de subida (PUT) ===
+      const putUrl = new URL(
+        `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${key}`
+      );
+      putUrl.searchParams.set("X-Amz-Expires", "3600");
 
-			putUrl.searchParams.set('X-Amz-Expires', '3600');
+      const signedUpload = await client.sign(
+        new Request(putUrl, { method: "PUT" }),
+        { aws: { signQuery: true } }
+      );
 
-			const signedUpload = await client.sign(new Request(putUrl, { method: 'PUT' }), { aws: { signQuery: true } });
+      // === Firmamos URL de descarga (GET) ===
+      const getUrl = new URL(
+        `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${key}`
+      );
+      getUrl.searchParams.set("X-Amz-Expires", "3600");
 
-			// === 4. Generar URL privada firmada para descarga (GET) ===
-			let getUrl = new URL(`https://${bucketName}.${accountId}.r2.cloudflarestorage.com`);
+      const signedDownload = await client.sign(
+        new Request(getUrl, { method: "GET" }),
+        { aws: { signQuery: true } }
+      );
 
-			getUrl.searchParams.set('X-Amz-Expires', '3600');
-
-			const signedDownload = await client.sign(new Request(getUrl, { method: 'GET' }), { aws: { signQuery: true } });
-
-			return Response.json({
-				ok: true,
-				uploadUrl: signedUpload.url,
-				downloadUrl: signedDownload.url,
-				objectKey: key,
-			});
-		} catch (error) {
-			return Response.json(
-				{
-					ok: false,
-					error: (error as Error).message,
-				},
-				{ status: 500 }
-			);
-		}
-	},
-} satisfies ExportedHandler;
+      return Response.json({
+        ok: true,
+        objectKey: key,
+        uploadUrl: signedUpload.url,
+        downloadUrl: signedDownload.url
+      });
+    } catch (error) {
+      return Response.json(
+        { ok: false, error: (error as Error).message },
+        { status: 500 }
+      );
+    }
+  }
+};
