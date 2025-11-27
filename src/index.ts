@@ -31,34 +31,27 @@ export default {
         accessKeyId: env.R2_ACCESS_KEY_ID,
         secretAccessKey: env.R2_SECRET_ACCESS_KEY
       });
-
-      // === Firmamos URL de subida (PUT) ===
-      const putUrl = new URL(
+      const url = new URL(
         `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${key}`
-      );
-      putUrl.searchParams.set("X-Amz-Expires", "3600");
+      )
+
+      // === Firmamos URL===
+      // Añadimos expiración de 2 horas
+      url.searchParams.set("X-Amz-Expires", "7200");
 
       const signedUpload = await client.sign(
-        new Request(putUrl, { method: "PUT" }),
-        { aws: { signQuery: true } }
+        new Request(url, { method: "PUT" }),
+        { 
+          aws: { signQuery: true }
+        },
       );
 
-      // === Firmamos URL de descarga (GET) ===
-      const getUrl = new URL(
-        `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${key}`
-      );
-      getUrl.searchParams.set("X-Amz-Expires", "3600");
-
-      const signedDownload = await client.sign(
-        new Request(getUrl, { method: "GET" }),
-        { aws: { signQuery: true } }
-      );
+      
 
       return Response.json({
         ok: true,
         objectKey: key,
-        uploadUrl: signedUpload.url,
-        downloadUrl: signedDownload.url
+        uploadUrl: signedUpload.url
       });
     } catch (error) {
       return Response.json(
