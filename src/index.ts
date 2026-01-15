@@ -25,7 +25,14 @@ export default {
 
       // Tomamos extensión y nombre real sin quemar nada
       const originalName = filename;
-      const key = `${crypto.randomUUID()}-${originalName}`;
+	  const regex = /[^a-zA-Z0-9.\-_]/g;
+      let key = `${crypto.randomUUID()}-${originalName}`.replace(regex, "_");
+      if (key.length > 100) {
+        const extension = originalName.includes(".")
+          ? originalName.substring(originalName.lastIndexOf("."))
+          : "";
+        key = key.substring(0, 100 - extension.length) + extension;
+      }
 
       const client = new AwsClient({
         accessKeyId: env.R2_ACCESS_KEY_ID,
