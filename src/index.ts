@@ -5,19 +5,30 @@ export interface Env {
   R2_SECRET_ACCESS_KEY: string;
   R2_ACCOUNT_ID: string;
   R2_BUCKET: string;
-}
+};
+
+
+const CORS = {
+  'Access-Control-Allow-Origin': 'http://localhost:4321',
+  'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 export default {
   async fetch(request, env) {
     try {
-      if (request.method !== "POST") {
-        return new Response("Method not allowed", { status: 405 });
+      if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: CORS });
+    }
+
+      if (request.method !== 'POST') {
+        return new Response('Method not allowed', { status: 405, headers: CORS });
       }
 
       const { filename } = await request.json();
       
       if (!filename || typeof filename !== "string") {
-        return new Response("Missing video name", { status: 400 });
+        return new Response("Missing video name", { status: 400, headers: CORS });
       }
 
       const bucket = env.R2_BUCKET;
@@ -59,12 +70,12 @@ export default {
         ok: true,
         objectKey: key,
         uploadUrl: signedUpload.url
-      });
+      }, { headers: CORS, status: 200 });
     } catch (error) {
       return Response.json(
         { ok: false, error: (error as Error).message },
-        { status: 500 }
+        { status: 500, headers: CORS }
       );
     }
   }
-};
+}
